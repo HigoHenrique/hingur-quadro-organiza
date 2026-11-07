@@ -62,9 +62,29 @@ function bindCardDrag(card, actions) {
   card.addEventListener("pointerdown", (event) => {
     if (event.target.closest("input, textarea, button")) return;
     event.preventDefault(); card.classList.add("kanban-card--dragging");
-    const move = (pointer) => { const target = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest(".kanban-column__cards"); if (!target) return; const sibling = [...target.querySelectorAll(".kanban-card:not(.kanban-card--dragging)")].find((item) => pointer.clientY < item.getBoundingClientRect().top + item.offsetHeight / 2); target.insertBefore(card, sibling ?? null); };
-    const end = () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", end); document.removeEventListener("pointercancel", end); card.classList.remove("kanban-card--dragging"); syncCards(card.closest(".kanban-columns"), actions); };
+    const board = card.closest(".kanban-columns");
+    const move = (pointer) => {
+      const target = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest(".kanban-column__cards"); if (!target) return;
+      board.querySelectorAll(".kanban-column__cards").forEach((container) => container.classList.toggle("kanban-column__cards--drop-target", container === target));
+      const sibling = [...target.querySelectorAll(".kanban-card:not(.kanban-card--dragging)")].find((item) => pointer.clientY < item.getBoundingClientRect().top + item.offsetHeight / 2);
+      const positions = capturePositions(board); target.insertBefore(card, sibling ?? null); animateReflow(positions, card);
+    };
+    const end = () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", end); document.removeEventListener("pointercancel", end); board.querySelectorAll(".kanban-column__cards").forEach((container) => container.classList.remove("kanban-column__cards--drop-target")); card.classList.remove("kanban-card--dragging"); syncCards(board, actions); };
     document.addEventListener("pointermove", move); document.addEventListener("pointerup", end); document.addEventListener("pointercancel", end);
+  });
+}
+
+function capturePositions(board) {
+  return new Map([...board.querySelectorAll(".kanban-card")].map((item) => [item, item.getBoundingClientRect()]));
+}
+
+function animateReflow(before, activeCard) {
+  before.forEach((from, item) => {
+    if (item === activeCard || !item.isConnected) return;
+    const to = item.getBoundingClientRect(); const x = from.left - to.left; const y = from.top - to.top;
+    if (!x && !y) return;
+    item.getAnimations().forEach((animation) => animation.cancel());
+    item.animate([{ transform: `translate(${x}px, ${y}px)` }, { transform: "translate(0, 0)" }], { duration: 180, easing: "cubic-bezier(.2, .8, .2, 1)" });
   });
 }
 
