@@ -46,7 +46,8 @@ function renderCard(note, actions) {
   PALETTE.forEach((color) => { const choice = button("", "kanban-card__color"); choice.style.background = color; choice.ariaLabel = `Usar cor ${color}`; choice.addEventListener("click", () => { card.style.setProperty("--card-color", color); actions.updateCard(note.id, { color }); }); palette.append(choice); });
   card.append(header, title, description, palette);
   let timer; const save = () => { clearTimeout(timer); timer = setTimeout(() => actions.updateCard(note.id, { title: title.value, description: description.value }), 350); };
-  title.addEventListener("input", save); description.addEventListener("input", save);
+  const resizeDescription = () => { description.style.height = "auto"; const height = Math.min(description.scrollHeight, 360); description.style.height = `${height}px`; description.style.overflowY = description.scrollHeight > 360 ? "auto" : "hidden"; };
+  title.addEventListener("input", save); description.addEventListener("input", () => { resizeDescription(); save(); }); requestAnimationFrame(resizeDescription);
   [title, description].forEach((field) => field.addEventListener("blur", () => { clearTimeout(timer); actions.updateCard(note.id, { title: title.value, description: description.value }); actions.removeIfEmpty(note.id, card); }));
   duplicate.addEventListener("click", () => { const copy = actions.duplicateCard(note.id); card.parentElement.append(renderCard(copy, actions)); });
   remove.addEventListener("click", () => confirmCardDeletion(card, note.id, actions));
