@@ -1,0 +1,13 @@
+:root {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-subtle: #f1f5f9;
+  --text: #334155;
+  --text-muted: #64748b;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --border: #e2e8f0;
+  --shadow: 0 20px 50px rgb(15 23 42 / 0.08);
+  --radius-lg: 20px;
+  --radius-md: 12px;
+}
