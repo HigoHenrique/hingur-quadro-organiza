@@ -14,7 +14,10 @@ export function renderDashboard(root, boards, actions) {
   const header = element("header", { className: "dashboard__header" });
   const brand = element("div", { className: "brand" });
   brand.append(element("span", { className: "brand__mark", textContent: "S" }), document.createTextNode("Sticky Board"));
-  const create = button("+ Novo quadro", "button button--primary"); create.addEventListener("click", actions.create); header.append(brand, create);
+  const headerActions = element("div", { className: "dashboard__actions" });
+  const exportData = button("Exportar", "button"); exportData.addEventListener("click", actions.exportData);
+  const importData = button("Importar", "button"); importData.addEventListener("click", actions.importData);
+  const create = button("+ Novo quadro", "button button--primary"); create.addEventListener("click", actions.create); headerActions.append(exportData, importData, create); header.append(brand, headerActions);
   const intro = element("div", { className: "dashboard__intro" }); intro.append(element("h1", { textContent: "Seus quadros" }), element("p", { textContent: "Capture uma ideia e organize o restante depois." })); page.append(header, intro);
   if (!boards.length) {
     const empty = element("section", { className: "empty-state" }); empty.append(element("div", { className: "empty-state__illustration", textContent: "✦" }), element("h2", { textContent: "Comece com um espaço em branco" }), element("p", { textContent: "Crie um quadro livre para ideias visuais ou um Kanban para acompanhar etapas." })); const emptyCreate = button("Criar meu primeiro quadro", "button button--primary"); emptyCreate.addEventListener("click", actions.create); empty.append(emptyCreate); page.append(empty);

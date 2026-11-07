@@ -1,6 +1,7 @@
 import { BoardService } from "./services/BoardService.js";
 import { NoteService } from "./services/NoteService.js";
 import { ColumnService } from "./services/ColumnService.js";
+import { BackupService } from "./services/BackupService.js";
 import { StorageService } from "./services/StorageService.js";
 import { Router } from "./core/Router.js";
 import { renderBoardPlaceholder, renderDashboard } from "./views/DashboardView.js";
@@ -12,6 +13,7 @@ const storage = new StorageService();
 const boardService = new BoardService(storage);
 const noteService = new NoteService(boardService);
 const columnService = new ColumnService(boardService);
+const backupService = new BackupService(boardService);
 const router = new Router(renderRoute);
 
 router.start();
@@ -56,7 +58,29 @@ function renderRoute(route) {
     rename: (item) => openBoardModal(item),
     duplicate: (item) => { boardService.duplicateBoard(item.id); renderRoute(router.current()); },
     remove: (item) => openDeleteModal(item),
+    exportData: () => backupService.export(),
+    importData: () => selectBackupFile(),
   });
+}
+
+function selectBackupFile() {
+  const input = document.createElement("input"); input.type = "file"; input.accept = "application/json,.json";
+  input.addEventListener("change", async () => {
+    const [file] = input.files;
+    if (!file) return;
+    try { openImportModal(backupService.parse(await file.text())); } catch (error) { showMessage("Não foi possível importar", error.message); }
+  });
+  input.click();
+}
+
+function openImportModal(documentToImport) {
+  const backdrop = document.createElement("div"); backdrop.className = "modal-backdrop"; const dialog = document.createElement("section"); dialog.className = "modal"; dialog.setAttribute("role", "dialog"); dialog.setAttribute("aria-modal", "true");
+  const title = document.createElement("h2"); title.textContent = "Importar backup"; const copy = document.createElement("p"); copy.textContent = `O arquivo contém ${documentToImport.boards.length} quadro(s). Escolha como deseja aplicar os dados.`;
+  const actions = document.createElement("div"); actions.className = "modal__actions"; const cancel = button("Cancelar"); cancel.addEventListener("click", () => backdrop.remove()); const merge = button("Mesclar", "button"); merge.addEventListener("click", () => { backupService.merge(documentToImport); backdrop.remove(); renderRoute(router.current()); }); const replace = button("Substituir tudo", "button button--primary"); replace.addEventListener("click", () => { backupService.replace(documentToImport); backdrop.remove(); renderRoute(router.current()); }); actions.append(cancel, merge, replace); dialog.append(title, copy, actions); backdrop.append(dialog); document.body.append(backdrop);
+}
+
+function showMessage(titleText, copyText) {
+  const backdrop = document.createElement("div"); backdrop.className = "modal-backdrop"; const dialog = document.createElement("section"); dialog.className = "modal"; const title = document.createElement("h2"); title.textContent = titleText; const copy = document.createElement("p"); copy.textContent = copyText; const close = button("Entendi", "button button--primary"); close.addEventListener("click", () => backdrop.remove()); const actions = document.createElement("div"); actions.className = "modal__actions"; actions.append(close); dialog.append(title, copy, actions); backdrop.append(dialog); document.body.append(backdrop); close.focus();
 }
 
 function openBoardModal(board = null) {
