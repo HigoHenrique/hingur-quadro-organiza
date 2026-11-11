@@ -38,8 +38,9 @@ function renderCard(note, actions) {
   const card = document.createElement("article"); card.className = "kanban-card"; card.dataset.noteId = note.id; card.style.setProperty("--card-color", note.color);
   const header = document.createElement("div"); header.className = "kanban-card__header";
   const drag = button("⠿", "kanban-card__drag"); drag.ariaLabel = "Mover cartão";
+  const copy = button("⎘", "kanban-card__tool"); copy.ariaLabel = "Copiar conteúdo"; copy.title = "Copiar conteúdo";
   const duplicate = button("⧉", "kanban-card__tool"); duplicate.ariaLabel = "Duplicar cartão"; duplicate.title = "Duplicar";
-  const remove = button("×", "kanban-card__tool"); remove.ariaLabel = "Excluir cartão"; remove.title = "Excluir"; header.append(drag, duplicate, remove);
+  const remove = button("×", "kanban-card__tool"); remove.ariaLabel = "Excluir cartão"; remove.title = "Excluir"; header.append(drag, copy, duplicate, remove);
   const title = document.createElement("input"); title.className = "kanban-card__title"; title.value = note.title; title.placeholder = "Título"; title.maxLength = 120; title.ariaLabel = "Título do cartão";
   const description = document.createElement("textarea"); description.className = "kanban-card__description"; description.value = note.description; description.placeholder = "Descrição"; description.maxLength = 2000; description.ariaLabel = "Descrição do cartão";
   const palette = document.createElement("div"); palette.className = "kanban-card__palette";
@@ -54,8 +55,14 @@ function renderCard(note, actions) {
   const resizeText = (amount) => { const current = Number.parseInt(card.style.getPropertyValue("--card-scale"), 10) || 18; const size = Math.min(28, Math.max(13, current + amount)); note.textSize = size; card.style.setProperty("--card-scale", `${size}px`); title.style.fontSize = `${size + 3}px`; description.style.fontSize = `${size}px`; actions.updateCard(note.id, { textSize: size }); }; decrease.addEventListener("click", () => resizeText(-1)); increase.addEventListener("click", () => resizeText(1));
   [title, description].forEach((field) => field.addEventListener("blur", () => { clearTimeout(timer); actions.updateCard(note.id, { title: title.value, description: description.value }); actions.removeIfEmpty(note.id, card); }));
   duplicate.addEventListener("click", () => { const copy = actions.duplicateCard(note.id); card.parentElement.append(renderCard(copy, actions)); });
+  copy.addEventListener("click", async () => { await copyContent(description.value); copy.title = "Copiado"; setTimeout(() => { copy.title = "Copiar conteúdo"; }, 1500); });
   remove.addEventListener("click", () => confirmCardDeletion(card, note.id, actions));
   bindCardDrag(card, actions); return card;
+}
+
+async function copyContent(content) {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(content.trim());
+  const fallback = document.createElement("textarea"); fallback.value = content; document.body.append(fallback); fallback.select(); document.execCommand("copy"); fallback.remove();
 }
 
 function confirmCardDeletion(card, noteId, actions) {

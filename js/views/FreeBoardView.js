@@ -88,9 +88,10 @@ function renderNote(canvas, note, actions) {
   const header = document.createElement("div"); header.className = "sticky-note__header";
   const drag = makeButton("⠿", "sticky-note__drag"); drag.ariaLabel = "Mover post-it";
   const menu = document.createElement("div"); menu.className = "sticky-note__tools";
+  const copy = makeButton("⎘", "sticky-note__tool"); copy.ariaLabel = "Copiar conteúdo"; copy.title = "Copiar conteúdo";
   const duplicate = makeButton("⧉", "sticky-note__tool"); duplicate.ariaLabel = "Duplicar post-it"; duplicate.title = "Duplicar";
   const remove = makeButton("×", "sticky-note__tool"); remove.ariaLabel = "Excluir post-it"; remove.title = "Excluir";
-  menu.append(duplicate, remove); header.append(drag, menu);
+  menu.append(copy, duplicate, remove); header.append(drag, menu);
   const title = document.createElement("input"); title.className = "sticky-note__title"; title.value = note.title; title.placeholder = "Título"; title.maxLength = 120; title.ariaLabel = "Título do post-it";
   const formatBar = document.createElement("div"); formatBar.className = "sticky-note__format";
   const black = makeButton("Preto", "sticky-note__format-button"); const white = makeButton("Branco", "sticky-note__format-button"); const decrease = makeButton("A−", "sticky-note__format-button"); const increase = makeButton("A+", "sticky-note__format-button"); decrease.ariaLabel = "Diminuir texto"; increase.ariaLabel = "Aumentar texto"; formatBar.append(black, white, decrease, increase);
@@ -112,6 +113,7 @@ function renderNote(canvas, note, actions) {
   decrease.addEventListener("click", () => resizeText(-1)); increase.addEventListener("click", () => resizeText(1));
   [title, description].forEach((field) => field.addEventListener("blur", () => { clearTimeout(typingTimer); actions.update(note.id, { title: title.value, description: description.value }); actions.removeIfEmpty(note.id, element); }));
   duplicate.addEventListener("click", () => { const copy = actions.duplicate(note.id); const copyElement = renderNote(canvas, copy, actions); canvas.append(copyElement); requestAnimationFrame(() => copyElement.querySelector("input").focus()); });
+  copy.addEventListener("click", async () => { await copyContent(description.value); copy.title = "Copiado"; setTimeout(() => { copy.title = "Copiar conteúdo"; }, 1500); });
   remove.addEventListener("click", () => requestRemoval());
   function setColor(color) { element.style.setProperty("--note-color", color); actions.update(note.id, { color }); }
   bindMove(element, header, note, actions); bindResize(element, resize, note, actions);
@@ -127,6 +129,11 @@ function renderNote(canvas, note, actions) {
     accept.addEventListener("click", () => { actions.remove(note.id); element.remove(); });
     confirm.append(message, cancel, accept); element.append(confirm); cancel.focus();
   }
+}
+
+async function copyContent(content) {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(content.trim());
+  const fallback = document.createElement("textarea"); fallback.value = content; document.body.append(fallback); fallback.select(); document.execCommand("copy"); fallback.remove();
 }
 
 function bindMove(element, handle, note, actions) {
