@@ -10,4 +10,15 @@
   --shadow: 0 20px 50px rgb(15 23 42 / 0.08);
   --radius-lg: 20px;
   --radius-md: 12px;
+  --canvas-background: #f8fafc;
+  --canvas-dot: #cbd5e1;
+  --kanban-background: #f1f5f9;
+  --kanban-column: #e2e8f0;
+  --note-text: #334155;
+  --confirmation-surface: rgb(255 255 255 / .93);
+  --confirmation-button: #ffffff;
 }
+
+:root[data-theme="dark"] { --background: #111827; --surface: #1f2937; --surface-subtle: #374151; --text: #f1f5f9; --text-muted: #94a3b8; --accent: #60a5fa; --accent-hover: #93c5fd; --border: #475569; --shadow: 0 20px 50px rgb(0 0 0 / .32); --canvas-background: #111827; --canvas-dot: #334155; --kanban-background: #111827; --kanban-column: #1f2937; --note-text: #f8fafc; --confirmation-surface: rgb(31 41 55 / .96); --confirmation-button: #374151; }
+:root[data-theme="neon"] { --background: #030303; --surface: #0b0b0b; --surface-subtle: #181818; --text: #f8fafc; --text-muted: #a1a1aa; --accent: #00e5ff; --accent-hover: #39ff14; --border: #3f3f46; --shadow: 0 20px 50px rgb(0 229 255 / .16); --canvas-background: #030303; --canvas-dot: #27272a; --kanban-background: #030303; --kanban-column: #101010; --note-text: #09090b; --confirmation-surface: rgb(11 11 11 / .96); --confirmation-button: #181818; }
+:root[data-theme="minimal"] { --background: #18181b; --surface: #27272a; --surface-subtle: #3f3f46; --text: #f4f4f5; --text-muted: #a1a1aa; --accent: #d4d4d8; --accent-hover: #ffffff; --border: #52525b; --shadow: 0 20px 50px rgb(0 0 0 / .34); --canvas-background: #18181b; --canvas-dot: #3f3f46; --kanban-background: #18181b; --kanban-column: #27272a; --note-text: #f4f4f5; --confirmation-surface: rgb(39 39 42 / .96); --confirmation-button: #3f3f46; }

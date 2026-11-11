@@ -1,4 +1,4 @@
-const PALETTE = ["#FDE68A", "#FED7AA", "#FCA5A5", "#FBCFE8", "#DDD6FE", "#BFDBFE", "#A5F3FC", "#BBF7D0", "#D9F99D", "#E2E8F0"];
+import { getActivePalette } from "../core/themes.js";
 
 function makeButton(label, className = "button") {
   const button = document.createElement("button");
@@ -51,8 +51,9 @@ export function renderFreeBoard(root, board, actions) {
 
   const createNote = () => {
     const note = actions.create({
-      x: Math.max(48, (viewport.clientWidth / 2 - settings.viewportX) / settings.zoom - 120),
-      y: Math.max(48, (viewport.clientHeight / 2 - settings.viewportY) / settings.zoom - 90),
+      x: Math.max(48, (viewport.clientWidth / 2 - settings.viewportX) / settings.zoom - 160),
+      y: Math.max(48, (viewport.clientHeight / 2 - settings.viewportY) / settings.zoom - 125),
+      color: getActivePalette()[0],
     });
     const noteElement = renderNote(canvas, note, actions);
     canvas.append(noteElement);
@@ -91,17 +92,24 @@ function renderNote(canvas, note, actions) {
   const remove = makeButton("×", "sticky-note__tool"); remove.ariaLabel = "Excluir post-it"; remove.title = "Excluir";
   menu.append(duplicate, remove); header.append(drag, menu);
   const title = document.createElement("input"); title.className = "sticky-note__title"; title.value = note.title; title.placeholder = "Título"; title.maxLength = 120; title.ariaLabel = "Título do post-it";
+  const formatBar = document.createElement("div"); formatBar.className = "sticky-note__format";
+  const black = makeButton("Preto", "sticky-note__format-button"); const white = makeButton("Branco", "sticky-note__format-button"); const decrease = makeButton("A−", "sticky-note__format-button"); const increase = makeButton("A+", "sticky-note__format-button"); decrease.ariaLabel = "Diminuir texto"; increase.ariaLabel = "Aumentar texto"; formatBar.append(black, white, decrease, increase);
   const description = document.createElement("textarea"); description.className = "sticky-note__description"; description.value = note.description; description.placeholder = "Escreva algo…"; description.maxLength = 2000; description.ariaLabel = "Descrição do post-it";
+  const initialTextSize = Number(note.textSize ?? 18); element.style.setProperty("--note-content-color", note.textColor || ""); element.style.setProperty("--note-scale", `${initialTextSize}px`); title.style.fontSize = `${initialTextSize + 3}px`; description.style.fontSize = `${initialTextSize}px`;
   const footer = document.createElement("footer"); footer.className = "sticky-note__footer";
   const colors = document.createElement("div"); colors.className = "color-palette"; colors.ariaLabel = "Cor do post-it";
-  PALETTE.forEach((color) => { const choice = makeButton("", "color-palette__choice"); choice.style.background = color; choice.ariaLabel = `Usar cor ${color}`; choice.title = "Alterar cor"; choice.addEventListener("click", () => setColor(color)); colors.append(choice); });
-  footer.append(colors);
+  getActivePalette().forEach((color) => { const choice = makeButton("", "color-palette__choice"); choice.style.background = color; choice.ariaLabel = `Usar cor ${color}`; choice.title = "Alterar cor"; choice.addEventListener("click", () => setColor(color)); colors.append(choice); });
+  footer.append(colors, formatBar);
   const resize = document.createElement("span"); resize.className = "sticky-note__resize"; resize.ariaLabel = "Redimensionar post-it"; resize.setAttribute("role", "presentation");
   element.append(header, title, description, footer, resize);
 
   let typingTimer;
   const saveText = () => { clearTimeout(typingTimer); typingTimer = setTimeout(() => actions.update(note.id, { title: title.value, description: description.value }), 350); };
   title.addEventListener("input", saveText); description.addEventListener("input", saveText);
+  const setTextColor = (color) => { element.style.setProperty("--note-content-color", color); actions.update(note.id, { textColor: color }); };
+  black.addEventListener("click", () => setTextColor("#000000")); white.addEventListener("click", () => setTextColor("#ffffff"));
+  const resizeText = (amount) => { const current = Number.parseInt(element.style.getPropertyValue("--note-scale"), 10) || 18; const size = Math.min(28, Math.max(13, current + amount)); note.textSize = size; element.style.setProperty("--note-scale", `${size}px`); title.style.fontSize = `${size + 3}px`; description.style.fontSize = `${size}px`; actions.update(note.id, { textSize: size }); };
+  decrease.addEventListener("click", () => resizeText(-1)); increase.addEventListener("click", () => resizeText(1));
   [title, description].forEach((field) => field.addEventListener("blur", () => { clearTimeout(typingTimer); actions.update(note.id, { title: title.value, description: description.value }); actions.removeIfEmpty(note.id, element); }));
   duplicate.addEventListener("click", () => { const copy = actions.duplicate(note.id); const copyElement = renderNote(canvas, copy, actions); canvas.append(copyElement); requestAnimationFrame(() => copyElement.querySelector("input").focus()); });
   remove.addEventListener("click", () => requestRemoval());

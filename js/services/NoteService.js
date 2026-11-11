@@ -45,7 +45,7 @@ export class NoteService {
   removeIfEmpty(boardId, noteId) {
     const board = this.boardService.requireBoard(boardId);
     const note = this.requireNote(board, noteId);
-    if (!note.title.trim() && !note.description.trim()) this.remove(boardId, noteId);
+    if (!note.title.trim() && !note.description.trim() && !String(note.code ?? "").trim()) this.remove(boardId, noteId);
   }
 
   syncKanban(boardId, columns) {

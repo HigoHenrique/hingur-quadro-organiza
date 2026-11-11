@@ -2,6 +2,8 @@ import { BoardService } from "./services/BoardService.js";
 import { NoteService } from "./services/NoteService.js";
 import { ColumnService } from "./services/ColumnService.js";
 import { BackupService } from "./services/BackupService.js";
+import { ThemeService } from "./services/ThemeService.js";
+import { THEMES, getActivePalette } from "./core/themes.js";
 import { StorageService } from "./services/StorageService.js";
 import { Router } from "./core/Router.js";
 import { renderBoardPlaceholder, renderDashboard } from "./views/DashboardView.js";
@@ -14,6 +16,22 @@ const boardService = new BoardService(storage);
 const noteService = new NoteService(boardService);
 const columnService = new ColumnService(boardService);
 const backupService = new BackupService(boardService);
+const themeService = new ThemeService(boardService);
+themeService.apply(themeService.load());
+
+window.addEventListener("sticky-board:storage-error", (event) => showMessage("Alterações não foram salvas", event.detail));
+document.addEventListener("keydown", (event) => {
+  const modals = document.querySelectorAll(".modal-backdrop");
+  const backdrop = modals[modals.length - 1];
+  if (!backdrop) return;
+  if (event.key === "Escape") { event.preventDefault(); backdrop.remove(); return; }
+  if (event.key !== "Tab") return;
+  const focusable = [...backdrop.querySelectorAll("button, input, select, textarea, [href], [tabindex]:not([tabindex='-1'])")].filter((item) => !item.disabled);
+  if (!focusable.length) return;
+  const first = focusable[0]; const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+});
 const router = new Router(renderRoute);
 
 router.start();
@@ -44,7 +62,7 @@ function renderRoute(route) {
     renameColumn: (columnId, name) => columnService.rename(board.id, columnId, name),
     deleteColumn: (columnId, destination) => columnService.delete(board.id, columnId, destination),
     reorderColumns: (ids) => columnService.reorder(board.id, ids),
-    createCard: (columnId) => noteService.create(board.id, { columnId }),
+    createCard: (columnId) => noteService.create(board.id, { columnId, color: getActivePalette()[0] }),
     updateCard: (noteId, changes) => noteService.update(board.id, noteId, changes),
     duplicateCard: (noteId) => noteService.duplicate(board.id, noteId),
     removeCard: (noteId) => noteService.remove(board.id, noteId),
@@ -60,7 +78,14 @@ function renderRoute(route) {
     remove: (item) => openDeleteModal(item),
     exportData: () => backupService.export(),
     importData: () => selectBackupFile(),
+    theme: () => openThemeModal(),
   });
+}
+
+function openThemeModal() {
+  const backdrop = document.createElement("div"); backdrop.className = "modal-backdrop"; const dialog = document.createElement("section"); dialog.className = "modal"; dialog.setAttribute("role", "dialog"); dialog.setAttribute("aria-modal", "true"); const title = document.createElement("h2"); title.textContent = "Escolher tema"; const copy = document.createElement("p"); copy.textContent = "O tema escolhido será lembrado neste navegador."; const choices = document.createElement("div"); choices.className = "theme-picker";
+  Object.entries(THEMES).forEach(([id, theme]) => { const choice = button(theme.label, "theme-picker__choice"); choice.dataset.theme = id; choice.style.setProperty("--theme-preview", theme.palette[0]); choice.setAttribute("aria-pressed", String(themeService.load() === id)); choice.addEventListener("click", () => { themeService.set(id); backdrop.remove(); renderRoute(router.current()); }); choices.append(choice); });
+  const actions = document.createElement("div"); actions.className = "modal__actions"; const close = button("Cancelar"); close.addEventListener("click", () => backdrop.remove()); actions.append(close); dialog.append(title, copy, choices, actions); backdrop.append(dialog); document.body.append(backdrop); close.focus();
 }
 
 function selectBackupFile() {
@@ -80,7 +105,7 @@ function openImportModal(documentToImport) {
 }
 
 function showMessage(titleText, copyText) {
-  const backdrop = document.createElement("div"); backdrop.className = "modal-backdrop"; const dialog = document.createElement("section"); dialog.className = "modal"; const title = document.createElement("h2"); title.textContent = titleText; const copy = document.createElement("p"); copy.textContent = copyText; const close = button("Entendi", "button button--primary"); close.addEventListener("click", () => backdrop.remove()); const actions = document.createElement("div"); actions.className = "modal__actions"; actions.append(close); dialog.append(title, copy, actions); backdrop.append(dialog); document.body.append(backdrop); close.focus();
+  const backdrop = document.createElement("div"); backdrop.className = "modal-backdrop"; const dialog = document.createElement("section"); dialog.className = "modal"; dialog.setAttribute("role", "alertdialog"); dialog.setAttribute("aria-modal", "true"); const title = document.createElement("h2"); title.textContent = titleText; const copy = document.createElement("p"); copy.textContent = copyText; const close = button("Entendi", "button button--primary"); close.addEventListener("click", () => backdrop.remove()); const actions = document.createElement("div"); actions.className = "modal__actions"; actions.append(close); dialog.append(title, copy, actions); backdrop.append(dialog); document.body.append(backdrop); close.focus();
 }
 
 function openBoardModal(board = null) {

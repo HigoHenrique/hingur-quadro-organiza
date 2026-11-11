@@ -23,7 +23,7 @@ export function assertValidDocument(document) {
     board.columns.forEach((column) => { if (!column || typeof column.id !== "string" || !column.id || typeof column.name !== "string" || !Number.isFinite(column.order) || columnIds.has(column.id)) throw new TypeError("Uma coluna do backup é inválida."); columnIds.add(column.id); });
     const noteIds = new Set();
     board.notes.forEach((note) => {
-      if (!note || typeof note.id !== "string" || !note.id || typeof note.title !== "string" || typeof note.description !== "string" || typeof note.color !== "string" || !Number.isFinite(note.order) || noteIds.has(note.id)) throw new TypeError("Um post-it do backup é inválido.");
+      if (!note || typeof note.id !== "string" || !note.id || typeof note.title !== "string" || typeof note.description !== "string" || (note.code !== undefined && typeof note.code !== "string") || typeof note.color !== "string" || !Number.isFinite(note.order) || noteIds.has(note.id)) throw new TypeError("Um post-it do backup é inválido.");
       const validPosition = Number.isFinite(note.x) && Number.isFinite(note.y) && Number.isFinite(note.width) && Number.isFinite(note.height);
       if (!validPosition) throw new TypeError("A posição de um post-it é inválida.");
       if (note.columnId !== null && (typeof note.columnId !== "string" || !columnIds.has(note.columnId))) throw new TypeError("Um cartão referencia uma coluna inexistente."); noteIds.add(note.id);

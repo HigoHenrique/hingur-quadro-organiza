@@ -3,6 +3,8 @@ import { createEmptyDocument, validateDocument } from "../utils/validators.js";
 const STORAGE_KEY = "sticky-board:data";
 
 export class StorageService {
+  constructor() { this.lastError = null; }
+
   load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -11,6 +13,7 @@ export class StorageService {
       if (!validateDocument(document)) throw new TypeError("Dados locais inválidos.");
       return document;
     } catch (error) {
+      this.lastError = error;
       console.warn("Não foi possível carregar os dados do Sticky Board.", error);
       return createEmptyDocument();
     }
@@ -21,7 +24,10 @@ export class StorageService {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(document));
     } catch (error) {
-      throw new Error("Não foi possível salvar localmente. Exporte um backup assim que possível.", { cause: error });
+      const message = "Não foi possível salvar localmente. Exporte um backup assim que possível.";
+      const saveError = new Error(message, { cause: error });
+      window.dispatchEvent(new CustomEvent("sticky-board:storage-error", { detail: message }));
+      throw saveError;
     }
   }
 }
