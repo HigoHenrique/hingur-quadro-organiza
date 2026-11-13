@@ -1,9 +1,27 @@
-const URL_PATTERN = /https?:\/\/[^\s]+/g;
+const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s]+/gi;
 
 export function refreshLinks(host, content) {
   host.replaceChildren();
-  const urls = [...new Set((content.match(URL_PATTERN) ?? []).map((url) => url.replace(/[),.!?]+$/, "")))];
-  urls.forEach((url) => { const link = document.createElement("a"); link.className = "content-link"; link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = url; host.append(link); });
+  if (!content) {
+    host.hidden = true;
+    return;
+  }
+  const rawUrls = content.match(URL_PATTERN) ?? [];
+  const urls = [...new Set(rawUrls.map((url) => url.replace(/[),.!?:;'"]+$/, "")))].filter(Boolean);
+
+  urls.forEach((url) => {
+    const link = document.createElement("a");
+    link.className = "content-link";
+    link.href = url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = url;
+    link.title = `Abrir ${url}`;
+    link.addEventListener("pointerdown", (event) => event.stopPropagation());
+    link.addEventListener("click", (event) => event.stopPropagation());
+    host.append(link);
+  });
+
   host.hidden = !urls.length;
 }
 

@@ -1,4 +1,5 @@
 import { getActivePalette } from "../core/themes.js";
+import { refreshLinks } from "../utils/richContent.js";
 
 function button(label, className = "button") { const node = document.createElement("button"); node.type = "button"; node.className = className; node.textContent = label; return node; }
 function ordered(items) { return [...items].sort((a, b) => a.order - b.order); }
@@ -47,13 +48,26 @@ function renderCard(note, actions) {
   const format = document.createElement("div"); format.className = "kanban-card__format"; const black = button("Preto", "kanban-card__format-button"); const white = button("Branco", "kanban-card__format-button"); const decrease = button("A−", "kanban-card__format-button"); const increase = button("A+", "kanban-card__format-button"); decrease.ariaLabel = "Diminuir texto"; increase.ariaLabel = "Aumentar texto"; format.append(black, white, decrease, increase);
   getActivePalette().forEach((color) => { const choice = button("", "kanban-card__color"); choice.style.background = color; choice.ariaLabel = `Usar cor ${color}`; choice.addEventListener("click", () => { card.style.setProperty("--card-color", color); actions.updateCard(note.id, { color }); }); palette.append(choice); });
   const initialTextSize = Number(note.textSize ?? 18); card.style.setProperty("--card-content-color", note.textColor || ""); card.style.setProperty("--card-scale", `${initialTextSize}px`); title.style.fontSize = `${initialTextSize + 3}px`; description.style.fontSize = `${initialTextSize}px`;
-  card.append(header, title, description, palette, format);
-  let timer; const save = () => { clearTimeout(timer); timer = setTimeout(() => actions.updateCard(note.id, { title: title.value, description: description.value }), 350); };
+  const links = document.createElement("div"); links.className = "content-links";
+  refreshLinks(links, `${note.title} ${note.description}`);
+  card.append(header, title, description, links, palette, format);
+  let timer;
+  const updateLinks = () => refreshLinks(links, `${title.value} ${description.value}`);
+  const save = () => {
+    updateLinks();
+    clearTimeout(timer);
+    timer = setTimeout(() => actions.updateCard(note.id, { title: title.value, description: description.value }), 350);
+  };
   const resizeDescription = () => { description.style.height = "auto"; const height = Math.min(description.scrollHeight, 360); description.style.height = `${height}px`; description.style.overflowY = description.scrollHeight > 360 ? "auto" : "hidden"; };
   title.addEventListener("input", save); description.addEventListener("input", () => { resizeDescription(); save(); }); requestAnimationFrame(resizeDescription);
   const setTextColor = (color) => { card.style.setProperty("--card-content-color", color); actions.updateCard(note.id, { textColor: color }); }; black.addEventListener("click", () => setTextColor("#000000")); white.addEventListener("click", () => setTextColor("#ffffff"));
   const resizeText = (amount) => { const current = Number.parseInt(card.style.getPropertyValue("--card-scale"), 10) || 18; const size = Math.min(28, Math.max(13, current + amount)); note.textSize = size; card.style.setProperty("--card-scale", `${size}px`); title.style.fontSize = `${size + 3}px`; description.style.fontSize = `${size}px`; actions.updateCard(note.id, { textSize: size }); }; decrease.addEventListener("click", () => resizeText(-1)); increase.addEventListener("click", () => resizeText(1));
-  [title, description].forEach((field) => field.addEventListener("blur", () => { clearTimeout(timer); actions.updateCard(note.id, { title: title.value, description: description.value }); actions.removeIfEmpty(note.id, card); }));
+  [title, description].forEach((field) => field.addEventListener("blur", () => {
+    clearTimeout(timer);
+    updateLinks();
+    actions.updateCard(note.id, { title: title.value, description: description.value });
+    actions.removeIfEmpty(note.id, card);
+  }));
   duplicate.addEventListener("click", () => { const copy = actions.duplicateCard(note.id); card.parentElement.append(renderCard(copy, actions)); });
   copy.addEventListener("click", async () => { await copyContent(description.value); copy.title = "Copiado"; setTimeout(() => { copy.title = "Copiar conteúdo"; }, 1500); });
   remove.addEventListener("click", () => confirmCardDeletion(card, note.id, actions));

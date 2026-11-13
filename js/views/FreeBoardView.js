@@ -1,4 +1,5 @@
 import { getActivePalette } from "../core/themes.js";
+import { refreshLinks } from "../utils/richContent.js";
 
 function makeButton(label, className = "button") {
   const button = document.createElement("button");
@@ -101,17 +102,29 @@ function renderNote(canvas, note, actions) {
   const colors = document.createElement("div"); colors.className = "color-palette"; colors.ariaLabel = "Cor do post-it";
   getActivePalette().forEach((color) => { const choice = makeButton("", "color-palette__choice"); choice.style.background = color; choice.ariaLabel = `Usar cor ${color}`; choice.title = "Alterar cor"; choice.addEventListener("click", () => setColor(color)); colors.append(choice); });
   footer.append(colors, formatBar);
+  const links = document.createElement("div"); links.className = "content-links";
+  refreshLinks(links, `${note.title} ${note.description}`);
   const resize = document.createElement("span"); resize.className = "sticky-note__resize"; resize.ariaLabel = "Redimensionar post-it"; resize.setAttribute("role", "presentation");
-  element.append(header, title, description, footer, resize);
+  element.append(header, title, description, links, footer, resize);
 
   let typingTimer;
-  const saveText = () => { clearTimeout(typingTimer); typingTimer = setTimeout(() => actions.update(note.id, { title: title.value, description: description.value }), 350); };
+  const updateLinks = () => refreshLinks(links, `${title.value} ${description.value}`);
+  const saveText = () => {
+    updateLinks();
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => actions.update(note.id, { title: title.value, description: description.value }), 350);
+  };
   title.addEventListener("input", saveText); description.addEventListener("input", saveText);
   const setTextColor = (color) => { element.style.setProperty("--note-content-color", color); actions.update(note.id, { textColor: color }); };
   black.addEventListener("click", () => setTextColor("#000000")); white.addEventListener("click", () => setTextColor("#ffffff"));
   const resizeText = (amount) => { const current = Number.parseInt(element.style.getPropertyValue("--note-scale"), 10) || 18; const size = Math.min(28, Math.max(13, current + amount)); note.textSize = size; element.style.setProperty("--note-scale", `${size}px`); title.style.fontSize = `${size + 3}px`; description.style.fontSize = `${size}px`; actions.update(note.id, { textSize: size }); };
   decrease.addEventListener("click", () => resizeText(-1)); increase.addEventListener("click", () => resizeText(1));
-  [title, description].forEach((field) => field.addEventListener("blur", () => { clearTimeout(typingTimer); actions.update(note.id, { title: title.value, description: description.value }); actions.removeIfEmpty(note.id, element); }));
+  [title, description].forEach((field) => field.addEventListener("blur", () => {
+    clearTimeout(typingTimer);
+    updateLinks();
+    actions.update(note.id, { title: title.value, description: description.value });
+    actions.removeIfEmpty(note.id, element);
+  }));
   duplicate.addEventListener("click", () => { const copy = actions.duplicate(note.id); const copyElement = renderNote(canvas, copy, actions); canvas.append(copyElement); requestAnimationFrame(() => copyElement.querySelector("input").focus()); });
   copy.addEventListener("click", async () => { await copyContent(description.value); copy.title = "Copiado"; setTimeout(() => { copy.title = "Copiar conteúdo"; }, 1500); });
   remove.addEventListener("click", () => requestRemoval());
