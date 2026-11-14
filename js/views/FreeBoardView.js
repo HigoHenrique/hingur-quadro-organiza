@@ -1,5 +1,6 @@
 import { getActivePalette } from "../core/themes.js";
 import { refreshLinks } from "../utils/richContent.js";
+import { compressImage } from "../utils/image.js";
 
 function makeButton(label, className = "button") {
   const button = document.createElement("button");
@@ -81,6 +82,37 @@ export function renderFreeBoard(root, board, actions) {
     viewport.addEventListener("pointermove", move); viewport.addEventListener("pointerup", end, { once: true }); viewport.addEventListener("pointercancel", end, { once: true });
   });
   viewport.addEventListener("contextmenu", (event) => event.preventDefault());
+
+  const handleBoardPaste = async (event) => {
+    if (!page.isConnected) return;
+    if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+    const file = Array.from(event.clipboardData?.items ?? []).find((item) => item.type.startsWith("image/"))?.getAsFile();
+    if (!file) return;
+    event.preventDefault();
+    try {
+      const compressed = await compressImage(file);
+      const aspectRatio = (compressed.width || 1) / (compressed.height || 1);
+      const targetWidth = Math.min(450, Math.max(260, Math.round(compressed.width)));
+      const targetHeight = Math.min(520, Math.max(220, Math.round(targetWidth / aspectRatio) + 70));
+
+      const x = Math.max(48, (viewport.clientWidth / 2 - settings.viewportX) / settings.zoom - targetWidth / 2);
+      const y = Math.max(48, (viewport.clientHeight / 2 - settings.viewportY) / settings.zoom - targetHeight / 2);
+
+      const note = actions.create({
+        x,
+        y,
+        width: targetWidth,
+        height: targetHeight,
+        color: getActivePalette()[0],
+        image: compressed.dataUrl,
+      });
+      const noteElement = renderNote(canvas, note, actions);
+      canvas.append(noteElement);
+    } catch (err) {
+      console.error("Falha ao criar post-it com imagem colada:", err);
+    }
+  };
+  window.addEventListener("paste", handleBoardPaste);
 }
 
 function renderNote(canvas, note, actions) {
@@ -94,6 +126,28 @@ function renderNote(canvas, note, actions) {
   const remove = makeButton("×", "sticky-note__tool"); remove.ariaLabel = "Excluir post-it"; remove.title = "Excluir";
   menu.append(copy, duplicate, remove); header.append(drag, menu);
   const title = document.createElement("input"); title.className = "sticky-note__title"; title.value = note.title; title.placeholder = "Título"; title.maxLength = 120; title.ariaLabel = "Título do post-it";
+  const media = document.createElement("div"); media.className = "sticky-note__media";
+  const img = document.createElement("img"); img.className = "sticky-note__image"; img.alt = "Imagem do post-it";
+  const removeMedia = makeButton("×", "sticky-note__media-remove");
+  removeMedia.title = "Remover imagem";
+  removeMedia.ariaLabel = "Remover imagem";
+  removeMedia.addEventListener("click", (event) => {
+    event.stopPropagation();
+    note.image = null;
+    updateMedia();
+    actions.update(note.id, { image: null });
+  });
+  media.append(img, removeMedia);
+  const updateMedia = () => {
+    if (note.image) {
+      img.src = note.image;
+      media.hidden = false;
+    } else {
+      img.removeAttribute("src");
+      media.hidden = true;
+    }
+  };
+  updateMedia();
   const formatBar = document.createElement("div"); formatBar.className = "sticky-note__format";
   const black = makeButton("Preto", "sticky-note__format-button"); const white = makeButton("Branco", "sticky-note__format-button"); const decrease = makeButton("A−", "sticky-note__format-button"); const increase = makeButton("A+", "sticky-note__format-button"); decrease.ariaLabel = "Diminuir texto"; increase.ariaLabel = "Aumentar texto"; formatBar.append(black, white, decrease, increase);
   const description = document.createElement("textarea"); description.className = "sticky-note__description"; description.value = note.description; description.placeholder = "Escreva algo…"; description.maxLength = 2000; description.ariaLabel = "Descrição do post-it";
@@ -105,7 +159,21 @@ function renderNote(canvas, note, actions) {
   const links = document.createElement("div"); links.className = "content-links";
   refreshLinks(links, `${note.title} ${note.description}`);
   const resize = document.createElement("span"); resize.className = "sticky-note__resize"; resize.ariaLabel = "Redimensionar post-it"; resize.setAttribute("role", "presentation");
-  element.append(header, title, description, links, footer, resize);
+  element.append(header, media, title, description, links, footer, resize);
+
+  element.addEventListener("paste", async (event) => {
+    const file = Array.from(event.clipboardData?.items ?? []).find((item) => item.type.startsWith("image/"))?.getAsFile();
+    if (!file) return;
+    event.preventDefault();
+    try {
+      const compressed = await compressImage(file);
+      note.image = compressed.dataUrl;
+      updateMedia();
+      actions.update(note.id, { image: compressed.dataUrl });
+    } catch (err) {
+      console.error("Falha ao colar imagem no post-it:", err);
+    }
+  });
 
   let typingTimer;
   const updateLinks = () => refreshLinks(links, `${title.value} ${description.value}`);
