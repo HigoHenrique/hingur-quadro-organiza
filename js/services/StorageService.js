@@ -14,7 +14,7 @@ export class StorageService {
       return document;
     } catch (error) {
       this.lastError = error;
-      console.warn("Não foi possível carregar os dados do Sticky Board.", error);
+      console.warn("Não foi possível carregar os dados do Hingur organiza.", error);
       return createEmptyDocument();
     }
   }
