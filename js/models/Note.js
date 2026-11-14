@@ -10,6 +10,7 @@ export function createNote(overrides = {}) {
     textSize: 18,
     code: "",
     color: "#FDE68A",
+    image: null,
     x: 80,
     y: 80,
     width: 320,
