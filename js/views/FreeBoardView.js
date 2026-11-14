@@ -1,6 +1,6 @@
 import { getActivePalette } from "../core/themes.js";
 import { refreshLinks } from "../utils/richContent.js";
-import { compressImage } from "../utils/image.js";
+import { compressImage, copyNoteContent } from "../utils/image.js";
 
 function makeButton(label, className = "button") {
   const button = document.createElement("button");
@@ -194,7 +194,7 @@ function renderNote(canvas, note, actions) {
     actions.removeIfEmpty(note.id, element);
   }));
   duplicate.addEventListener("click", () => { const copy = actions.duplicate(note.id); const copyElement = renderNote(canvas, copy, actions); canvas.append(copyElement); requestAnimationFrame(() => copyElement.querySelector("input").focus()); });
-  copy.addEventListener("click", async () => { await copyContent(description.value); copy.title = "Copiado"; setTimeout(() => { copy.title = "Copiar conteúdo"; }, 1500); });
+  copy.addEventListener("click", async () => { await copyNoteContent({ text: description.value, image: note.image }); copy.title = "Copiado"; setTimeout(() => { copy.title = "Copiar conteúdo"; }, 1500); });
   remove.addEventListener("click", () => requestRemoval());
   function setColor(color) { element.style.setProperty("--note-color", color); actions.update(note.id, { color }); }
   bindMove(element, header, note, actions); bindResize(element, resize, note, actions);
@@ -213,8 +213,7 @@ function renderNote(canvas, note, actions) {
 }
 
 async function copyContent(content) {
-  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(content.trim());
-  const fallback = document.createElement("textarea"); fallback.value = content; document.body.append(fallback); fallback.select(); document.execCommand("copy"); fallback.remove();
+  return copyNoteContent({ text: content });
 }
 
 function bindMove(element, handle, note, actions) {

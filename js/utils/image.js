@@ -46,3 +46,55 @@ export async function compressImage(fileOrBlob, maxDimension = 1200, quality = 0
     reader.readAsDataURL(fileOrBlob);
   });
 }
+
+export async function dataUrlToPngBlob(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error("Falha ao preparar imagem para a área de transferência."));
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Falha ao converter imagem para PNG."));
+      }, "image/png");
+    };
+    img.src = dataUrl;
+  });
+}
+
+export async function copyNoteContent({ text = "", image = null } = {}) {
+  const trimmedText = (text || "").trim();
+
+  if (image && typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    try {
+      const pngBlob = await dataUrlToPngBlob(image);
+      const clipboardData = {
+        "image/png": pngBlob,
+      };
+      if (trimmedText) {
+        clipboardData["text/plain"] = new Blob([trimmedText], { type: "text/plain" });
+      }
+      await navigator.clipboard.write([new ClipboardItem(clipboardData)]);
+      return;
+    } catch (error) {
+      console.warn("Falha ao copiar imagem para clipboard, tentando texto:", error);
+    }
+  }
+
+  if (trimmedText) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(trimmedText);
+    } else {
+      const fallback = document.createElement("textarea");
+      fallback.value = trimmedText;
+      document.body.append(fallback);
+      fallback.select();
+      document.execCommand("copy");
+      fallback.remove();
+    }
+  }
+}
